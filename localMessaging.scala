@@ -3,21 +3,38 @@
 import akka.actor._
 import scala.collection.mutable.ListBuffer
 
-case class ActorAwaken(arg1: String)
-case class FirstMessage(arg1: String)
-case class Message(arg1: String)
-case class FriendRequest(arg1: String)
-case class RemoveFriend(arg1: String)
+case class ActorAwaken
+case class FirstMessage
+case class Message
+case class FriendRequest
+case class RemoveFriend
 
 class generalUser extends Actor {
-	def receive = {
-		case ActorAwaken(_) => println("Awaken")
-		case FirstMessage(_) => println("First")
-		case Message(_) => println("Message")
-		case FriendRequest(_) => println("FriendRequest")
-		case RemoveFriend(_) => println("RemoveFriend")
-		case _ => println("ERROR")
-	}
+	// def receive = {
+	// 	// case ActorAwaken(_) => println("Awaken")
+	// 	// case FirstMessage(_) => println("First")
+	// 	// case Message(_) => println("Message")
+	// 	// case FriendRequest(_) => println("FriendRequest")
+	// 	// case RemoveFriend(_) => println("RemoveFriend")
+	// 	case "hiii" => println(message)
+	// 	case _ => println("ERROR")
+	// }
+
+	def receive = new scala.PartialFunction[Any, Unit ] {
+	  def apply(x: Any): Unit = x match {
+		// case ActorAwaken => println("Awaken")
+		// case FirstMessage => println("First")
+		// case Message => println("Message")
+		// case FriendRequest => println("FriendRequest")
+		// case RemoveFriend => println("RemoveFriend")
+		case _:String => println(x)
+		case _ => println("ERROR")	  }
+
+	  def isDefinedAt(x: Any): Boolean = x match {
+	    case "hiii" => true
+	    case _ => true
+	  }
+	} 
 }
 
 class User1(otherUser: ActorRef, allActors: List[String]) extends Actor {
@@ -94,14 +111,14 @@ object localMessaging extends App {
 			} else {
 				return allActors
 			}
-
 		}
 
 		return createUser(numberOfUsers)
 	}
 
 	var allActors: ListBuffer[ActorRef] = createUsers(10)
-	allActors(0) ! ActorAwaken("bbb")
+	// allActors(0) ! ActorAwaken("bbb")
+	allActors(0) ! "12345"
 
 	def programLoop = {
 		// Start up a bunch of Actors 
@@ -109,3 +126,13 @@ object localMessaging extends App {
 		// Choose a random actor to start the conversation with.
 	}
 }
+
+/*
+TODO:
+✓ Research actor model
+✓ Create System to run local async message system
+✓ Add to github
+✓ Allow messages to contain arguments
+  Make this span multiple machines
+
+*/
