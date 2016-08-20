@@ -14,7 +14,7 @@ case class RemoveFriend(targetFriend: ActorRef)
 
 
 class generalUser(redis: RedisClient) extends Actor {
-	// val redis: RedisClient = redis
+	// val redis: RedisClient = redis  This may not be needed
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	val conversation: List[String] = List("a",
@@ -37,11 +37,22 @@ class generalUser(redis: RedisClient) extends Actor {
 			case Initialize(_:ListBuffer[ActorRef]) =>
 				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
 				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].listOfAllActors
-				println("it worked!")	  
+				println("Initialize")
 
 			case FirstMessage => 
 				// When someone sends the first message.
+
+				// Clear the chat at the beginning of each 
+				redis.del("server:chat_logs:%sV%s".format(self.path.name, sender.path.name))
+				redis.del("server:chat_logs:%sV%s".format(sender.path.name, self.path.name))
+
+				redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "Chat between %s and %s has started".format(self.path.name, sender.path.name))
+				redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "Chat between %s and %s has started".format(self.path.name, sender.path.name))
+
 				sender ! Message("%s: Greetings!".format(self.path.name))
+				redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "%s: Greetings!".format(self.path.name))
+				redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "%s: Greetings!".format(self.path.name))
+				
 
 			case Message(_:String) => 
 				// When someone sends any message
@@ -49,23 +60,28 @@ class generalUser(redis: RedisClient) extends Actor {
 				if (conversationCounter < conversationLength) {
 					println(theMessage)
 					sender ! Message("%s: %s".format(self.path.name, conversation(conversationCounter)))
+					redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "%s: %s".format(self.path.name, conversation(conversationCounter)))
+					redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "%s: %s".format(self.path.name, conversation(conversationCounter)))
 					conversationCounter += 1
 				} else {
-					println("Conversation over")					
+					println("Conversation over")
+					redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "Conversation Over") 
+					redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "Conversation Over") 
 				}
 
 			case FriendRequest(_:ActorRef) => 
 				// When someone sends a friends request to add to a list of their contacts
 				// Right now we go from friends request -> start convo with new contact -> Conversation
+				println("FriendRequest")
 				val theFriend: ActorRef = message.asInstanceOf[FriendRequest].targetFriend
 
-				println("FriendRequest")
 				contacts += theFriend
 
 				contacts(contacts.length - 1) ! FirstMessage
 
 			case RemoveFriend(_:ActorRef) => 
 				// When someone removes someone else from a list of their contacts
+				// Not currently used...
 				val theFriend: ActorRef = message.asInstanceOf[RemoveFriend].targetFriend
 				println("RemoveFriend")
 
@@ -106,6 +122,7 @@ object localMessaging extends App {
 
 	allActors(0) ! Initialize(allActors)						// Awaken
 	allActors(0) ! FriendRequest(allActors(1))					// Friend Request
+	// These above two lines create deadletters
 	// allActors(0) ! FriendRequest(allActors(2))				// Friend Request
 
 	// allActors(1) ! allActors									// Awaken
@@ -129,8 +146,8 @@ TODO:
 ✓ Add to github
 ✓ Allow messages to contain arguments
 ✓ Build base behavior of each actor
-  Add Redis functionality
-    Save chats
+✓ Add Redis functionality
+✓   Save chats
     Load up Shakespeare to have realistic looking chats
   Plan out distribution of
   	friend requests
@@ -139,4 +156,12 @@ TODO:
   Make this span multiple machines
   ⚑⚑⚑⚑⚑⚑ V1 DONE ⚑⚑⚑⚑⚑⚑
 
+*/
+
+/*
+Design considerations
+1) Chat logs should be the same log for both parties. Printing to redis twice generally solves
+   this but the asychronous nature of the Actors makes it hard to keep the messages in the right order.
+   Perhaps messages need to have a timestamp and a Queue collects and sorts the messages and puts them 
+   in the right order....
 */
