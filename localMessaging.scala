@@ -3,6 +3,7 @@
 import akka.actor._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
+import redis.RedisClient
 
 case class Whatever(arg1: String)
 case class Initialize(listOfAllActors: ListBuffer[ActorRef])
@@ -12,7 +13,8 @@ case class FriendRequest(targetFriend: ActorRef)
 case class RemoveFriend(targetFriend: ActorRef)
 
 
-class generalUser extends Actor {
+class generalUser(redis: RedisClient) extends Actor {
+	// val redis: RedisClient = redis
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	val conversation: List[String] = List("a",
@@ -81,13 +83,13 @@ class generalUser extends Actor {
 }
 
 object localMessaging extends App {
-	def createUsers(numberOfUsers: Int): ListBuffer[ActorRef] = {
+	def createUsers(numberOfUsers: Int, redis: RedisClient): ListBuffer[ActorRef] = {
 		@tailrec
 		var allActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 		
 		def createUser(userCount: Int): ListBuffer[ActorRef] = {
 			if (userCount > 0) {
-				allActors += system.actorOf(Props[generalUser], name = "%s".format(userCount))
+				allActors += system.actorOf(Props(new generalUser(redis)), name = "%s".format(userCount))
 				createUser(userCount -1)
 			} else {
 				allActors
@@ -97,22 +99,19 @@ object localMessaging extends App {
 		createUser(numberOfUsers)
 	}
 
-	val system = ActorSystem("AllPeople")
-	var allActors: ListBuffer[ActorRef] = createUsers(10)	// Create all users
+	implicit val system = ActorSystem("AllPeople")
+	val redis: RedisClient = RedisClient()
 
-	allActors(0) ! Initialize(allActors)								// Awaken
-	allActors(0) ! FriendRequest(allActors(1))								// Friend Request
-	// allActors(0) ! FriendRequest(allActors(2))								// Friend Request
+	var allActors: ListBuffer[ActorRef] = createUsers(10, redis)	    // Create all users
 
-	// allActors(1) ! allActors								// Awaken
+	allActors(0) ! Initialize(allActors)						// Awaken
+	allActors(0) ! FriendRequest(allActors(1))					// Friend Request
+	// allActors(0) ! FriendRequest(allActors(2))				// Friend Request
+
+	// allActors(1) ! allActors									// Awaken
 	// allActors(1) ! allActors(3)								// Friend Request
 	// allActors(1) ! allActors(4)								// Friend Request
 
-
-	// println(allActors(0))
-	// println(allActors)
-
-	// Awaken all actors
 
 	// programLoop = {
 	//  Send out all friend requests for this loop
