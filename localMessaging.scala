@@ -1,130 +1,131 @@
 // Messaging system local test
+// Not important: 9367e69399356d45d6b8cc408314a47c2c98c02d
 
 import akka.actor._
 import scala.collection.mutable.ListBuffer
+import scala.annotation.tailrec
 
-case class ActorAwaken
-case class FirstMessage
-case class Message
-case class FriendRequest
-case class RemoveFriend
+case object ActorAwaken
+case object FirstMessage
+case object Message
+case object FriendRequest
+case object RemoveFriend
+
+case class Whatever(arg1: String)
 
 class generalUser extends Actor {
-	// def receive = {
-	// 	// case ActorAwaken(_) => println("Awaken")
-	// 	// case FirstMessage(_) => println("First")
-	// 	// case Message(_) => println("Message")
-	// 	// case FriendRequest(_) => println("FriendRequest")
-	// 	// case RemoveFriend(_) => println("RemoveFriend")
-	// 	case "hiii" => println(message)
-	// 	case _ => println("ERROR")
-	// }
+	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
+	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
+	val conversation: List[String] = List("a",
+											"b",
+											"c",
+											"d",
+											"e",
+											"f",
+											"g",
+											"h",
+											"i",
+											"j",
+											"k",
+											"l")
+	var conversationCounter: Int = 0 //
+	val conversationLength: Int = conversation.length
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
-	  def apply(x: Any): Unit = x match {
-		// case ActorAwaken => println("Awaken")
-		// case FirstMessage => println("First")
-		// case Message => println("Message")
-		// case FriendRequest => println("FriendRequest")
-		// case RemoveFriend => println("RemoveFriend")
-		case _:String => println(x)
-		case _ => println("ERROR")	  }
+		def apply(message: Any): Unit = message match {
+			case _:ListBuffer[ActorRef] =>
+				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
+				println("it worked!")	  
+				println(self)	  
 
-	  def isDefinedAt(x: Any): Boolean = x match {
-	    case "hiii" => true
-	    case _ => true
-	  }
+			case FirstMessage => 
+				// When someone sends the first message.
+				println("First")
+				sender ! "%s: ))))))".format(self.path.name)
+
+			case _:String => 
+				// When someone sends any message
+				if (conversationCounter < conversationLength) {
+					println(message)
+					sender ! "%s: %s".format(self.path.name, conversation(conversationCounter))
+					conversationCounter += 1
+				} else {
+					println("Conversation over")					
+				}
+
+			case _:ActorRef => 
+				// When someone sends a friends request to add to a list of their contacts
+				// Right now we go from friends request -> start convo with new contact -> Conversation
+				var theMessage = message.asInstanceOf[ActorRef]
+				println("FriendRequest")
+				contacts += theMessage
+
+				contacts(contacts.length - 1) ! FirstMessage
+				println(contacts.length)
+
+			case RemoveFriend => 
+				// When someone removes someone else from a list of their contacts
+				println("RemoveFriend")
+
+			case Whatever(_) =>
+				var theMessage = message.asInstanceOf[Whatever]
+				println(theMessage.arg1)
+
+			case _ => 
+				println("it didn worked!")	  
+				println(message)	  
+		}
+
+		def isDefinedAt(x: Any): Boolean = x match {
+			// I may not need this function....
+			case "hiii" => true
+			case _ => true
+		}
 	} 
 }
 
-class User1(otherUser: ActorRef, allActors: List[String]) extends Actor {
-	var messageCount = 0
-	val maxMessages = 4
-	val name = "Fred"
-	val conversation: List[String] = List("No I dont have money!", 
-										"Its ok", 
-										"Yes it is", 
-										"This is boring",
-										"Ok fine Ill stay")
-
-	def receive = {
-		case "startConvo" =>
-			println("New conversation between Amy and Fred")
-			otherUser ! Message("Hi")
-
-		case Message(_) =>
-			// var arg2 = arg1
-			if (messageCount < maxMessages) {
-				println("%s: %s".format(name, conversation(messageCount)))
-				println(allActors(0))
-				messageCount += 1
-				otherUser ! Message("Hi")
-
-			} else {
-				println("conversation over")
-				context.stop(self)
-			}
-
-		case _ =>
-			println("what??")	
-	}
-}
-
-class User2 extends Actor {
-	var messageCount = 0
-	val name = "Amy"
-	val conversation: List[String] = List("Do you have any money?", 
-									"Sorrry..", 
-									"Its nice weather huh?", 
-									"Do you like ducks?",
-									"Please say!")
-	def receive = {
-		case Message(_) =>
-			println("%s: %s".format(name, conversation(messageCount)))
-			messageCount += 1
-
-			sender ! Message("Hi")
-		case _ =>
-			println("ERROR")	
-	}
-}
-
 object localMessaging extends App {
-	val theList: List[String] = List("Amy", "Bob", "Candy")
-
-	val system = ActorSystem("TwoPeople")
-	val amyActor = system.actorOf(Props[User2], name = "user2")
-	val fredActor = system.actorOf(Props(new User1(amyActor, theList)), name = "user1")
-	fredActor ! "startConvo"
-
-	val system1 = ActorSystem("AllPeople")
-	// val allActors: List[ActorRef] = List.fill(10)(system1.actorOf(Props[generalUser], name = "user"))
-
 	def createUsers(numberOfUsers: Int): ListBuffer[ActorRef] = {
+		@tailrec
 		var allActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
-		var userCount = numberOfUsers
 		
 		def createUser(userCount: Int): ListBuffer[ActorRef] = {
 			if (userCount > 0) {
-				allActors += system1.actorOf(Props[generalUser], name = "%s".format(userCount))
+				allActors += system.actorOf(Props[generalUser], name = "%s".format(userCount))
 				createUser(userCount -1)
 			} else {
-				return allActors
+				allActors
 			}
 		}
 
-		return createUser(numberOfUsers)
+		createUser(numberOfUsers)
 	}
 
-	var allActors: ListBuffer[ActorRef] = createUsers(10)
-	// allActors(0) ! ActorAwaken("bbb")
-	allActors(0) ! "12345"
+	val system = ActorSystem("AllPeople")
+	var allActors: ListBuffer[ActorRef] = createUsers(10)	// Create all users
 
-	def programLoop = {
-		// Start up a bunch of Actors 
-		// Send the Actor Awaken command to each of them
-		// Choose a random actor to start the conversation with.
-	}
+	allActors(0) ! Whatever("boya!")
+
+	allActors(0) ! allActors								// Awaken
+	allActors(0) ! allActors(1)								// Friend Request
+	// allActors(0) ! allActors(2)								// Friend Request
+
+	// allActors(1) ! allActors								// Awaken
+	// allActors(1) ! allActors(2)								// Friend Request
+	// allActors(1) ! allActors(3)								// Friend Request
+
+
+	// println(allActors(0))
+	// println(allActors)
+
+	// Awaken all actors
+
+	// programLoop = {
+	//  Send out all friend requests for this loop
+	//  Start all conversations for this loop
+	//  Send out all remove requests
+	//  Wait a second or some time
+	// }
 }
 
 /*
@@ -133,6 +134,7 @@ TODO:
 ✓ Create System to run local async message system
 ✓ Add to github
 ✓ Allow messages to contain arguments
+  Build base behavior of each actor
   Make this span multiple machines
 
 */
