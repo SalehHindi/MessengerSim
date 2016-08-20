@@ -5,13 +5,19 @@ import akka.actor._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 
-case object ActorAwaken
-case object FirstMessage
-case object Message
-case object FriendRequest
-case object RemoveFriend
+// case object ActorAwaken
+// case object FirstMessage
+// case object Message
+// case object FriendRequest
+// case object RemoveFriend
 
 case class Whatever(arg1: String)
+case class Initialize(listOfAllActors: ListBuffer[ActorRef])
+case object FirstMessage
+case class Message(messageContent: String)
+case class FriendRequest(targetFriend: ActorRef)
+case class RemoveFriend(targetFriend: ActorRef)
+
 
 class generalUser extends Actor {
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
@@ -33,46 +39,43 @@ class generalUser extends Actor {
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
-			case _:ListBuffer[ActorRef] =>
+			case Initialize(_:ListBuffer[ActorRef]) =>
 				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
+				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].listOfAllActors
 				println("it worked!")	  
-				println(self)	  
 
 			case FirstMessage => 
 				// When someone sends the first message.
-				println("First")
-				sender ! "%s: ))))))".format(self.path.name)
+				sender ! Message("%s: Greetings!".format(self.path.name))
 
-			case _:String => 
+			case Message(_:String) => 
 				// When someone sends any message
+				val theMessage: String = message.asInstanceOf[Message].messageContent
 				if (conversationCounter < conversationLength) {
-					println(message)
-					sender ! "%s: %s".format(self.path.name, conversation(conversationCounter))
+					println(theMessage)
+					sender ! Message("%s: %s".format(self.path.name, conversation(conversationCounter)))
 					conversationCounter += 1
 				} else {
 					println("Conversation over")					
 				}
 
-			case _:ActorRef => 
+			case FriendRequest(_:ActorRef) => 
 				// When someone sends a friends request to add to a list of their contacts
 				// Right now we go from friends request -> start convo with new contact -> Conversation
-				var theMessage = message.asInstanceOf[ActorRef]
+				val theFriend: ActorRef = message.asInstanceOf[FriendRequest].targetFriend
+
 				println("FriendRequest")
-				contacts += theMessage
+				contacts += theFriend
 
 				contacts(contacts.length - 1) ! FirstMessage
-				println(contacts.length)
 
-			case RemoveFriend => 
+			case RemoveFriend(_:ActorRef) => 
 				// When someone removes someone else from a list of their contacts
+				val theFriend: ActorRef = message.asInstanceOf[RemoveFriend].targetFriend
 				println("RemoveFriend")
 
-			case Whatever(_) =>
-				var theMessage = message.asInstanceOf[Whatever]
-				println(theMessage.arg1)
-
 			case _ => 
-				println("it didn worked!")	  
+				println("ERROR!")	  
 				println(message)	  
 		}
 
@@ -104,11 +107,9 @@ object localMessaging extends App {
 	val system = ActorSystem("AllPeople")
 	var allActors: ListBuffer[ActorRef] = createUsers(10)	// Create all users
 
-	allActors(0) ! Whatever("boya!")
-
-	allActors(0) ! allActors								// Awaken
-	allActors(0) ! allActors(1)								// Friend Request
-	// allActors(0) ! allActors(2)								// Friend Request
+	allActors(0) ! Initialize(allActors)								// Awaken
+	allActors(0) ! FriendRequest(allActors(1))								// Friend Request
+	// allActors(0) ! FriendRequest(allActors(2))								// Friend Request
 
 	// allActors(1) ! allActors								// Awaken
 	// allActors(1) ! allActors(2)								// Friend Request
