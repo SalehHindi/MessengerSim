@@ -1,15 +1,8 @@
 // Messaging system local test
-// Not important: 9367e69399356d45d6b8cc408314a47c2c98c02d
 
 import akka.actor._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
-
-// case object ActorAwaken
-// case object FirstMessage
-// case object Message
-// case object FriendRequest
-// case object RemoveFriend
 
 case class Whatever(arg1: String)
 case class Initialize(listOfAllActors: ListBuffer[ActorRef])
@@ -112,8 +105,8 @@ object localMessaging extends App {
 	// allActors(0) ! FriendRequest(allActors(2))								// Friend Request
 
 	// allActors(1) ! allActors								// Awaken
-	// allActors(1) ! allActors(2)								// Friend Request
 	// allActors(1) ! allActors(3)								// Friend Request
+	// allActors(1) ! allActors(4)								// Friend Request
 
 
 	// println(allActors(0))
@@ -130,12 +123,21 @@ object localMessaging extends App {
 }
 
 /*
+
 TODO:
 ✓ Research actor model
 ✓ Create System to run local async message system
 ✓ Add to github
 ✓ Allow messages to contain arguments
-  Build base behavior of each actor
+✓ Build base behavior of each actor
+  Add Redis functionality
+    Save chats
+    Load up Shakespeare to have realistic looking chats
+  Plan out distribution of
+  	friend requests
+  	who talks to who
+  	chat durations
   Make this span multiple machines
+  ⚑⚑⚑⚑⚑⚑ V1 DONE ⚑⚑⚑⚑⚑⚑
 
 */
