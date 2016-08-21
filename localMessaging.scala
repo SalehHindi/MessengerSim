@@ -4,6 +4,8 @@ import akka.actor._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 import redis.RedisClient
+import scala.concurrent._
+import scala.concurrent.duration._
 
 case class Whatever(arg1: String)
 case class Initialize(listOfAllActors: ListBuffer[ActorRef])
@@ -17,20 +19,8 @@ class generalUser(redis: RedisClient) extends Actor {
 	// val redis: RedisClient = redis  This may not be needed
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
-	val conversation: List[String] = List("a",
-											"b",
-											"c",
-											"d",
-											"e",
-											"f",
-											"g",
-											"h",
-											"i",
-											"j",
-											"k",
-											"l")
-	var conversationCounter: Int = 0 //
-	val conversationLength: Int = conversation.length
+	var conversationCounter: Int = 0
+	val conversationLength: Int = 20
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
@@ -59,10 +49,16 @@ class generalUser(redis: RedisClient) extends Actor {
 				val theMessage: String = message.asInstanceOf[Message].messageContent
 				if (conversationCounter < conversationLength) {
 					println(theMessage)
-					sender ! Message("%s: %s".format(self.path.name, conversation(conversationCounter)))
-					redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "%s: %s".format(self.path.name, conversation(conversationCounter)))
-					redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "%s: %s".format(self.path.name, conversation(conversationCounter)))
+
+					val dialogue = Await.result(redis.lpop("server:grimm_fairy_tales"), Duration(100, MILLISECONDS)).get.utf8String
+					// Await.result(dialogue, 5 seconds)
+
+					sender ! Message("%s: %s".format(self.path.name, dialogue))
 					conversationCounter += 1
+					
+					redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "%s: %s".format(self.path.name, dialogue))
+					redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "%s: %s".format(self.path.name, dialogue))
+				
 				} else {
 					println("Conversation over")
 					redis.rpush("server:chat_logs:%sV%s".format(self.path.name, sender.path.name), "Conversation Over") 
@@ -165,3 +161,9 @@ Design considerations
    Perhaps messages need to have a timestamp and a Queue collects and sorts the messages and puts them 
    in the right order....
 */
+
+// To load shakespeare chat, run a script that adds a shit ton of skake to redis is a list
+// then lpop that list to get the chat in order.
+// 
+//
+//
