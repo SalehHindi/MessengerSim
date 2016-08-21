@@ -16,18 +16,18 @@ case class RemoveFriend(targetFriend: ActorRef)
 
 
 class generalUser(redis: RedisClient) extends Actor {
-	// val redis: RedisClient = redis  This may not be needed
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var conversationCounter: Int = 0
-	val conversationLength: Int = 20
+	val conversationLength: Int = 100
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
 			case Initialize(_:ListBuffer[ActorRef]) =>
 				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
 				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].listOfAllActors
-				println("Initialize")
+				val pathAsString : String = self.path.toStringWithAddress(self.path.address)
+				redis.rpush("server:ActorMasterList", pathAsString)
 
 			case FirstMessage => 
 				// When someone sends the first message.
@@ -48,10 +48,7 @@ class generalUser(redis: RedisClient) extends Actor {
 				// When someone sends any message
 				val theMessage: String = message.asInstanceOf[Message].messageContent
 				if (conversationCounter < conversationLength) {
-					println(theMessage)
-
-					val dialogue = Await.result(redis.lpop("server:grimm_fairy_tales"), Duration(100, MILLISECONDS)).get.utf8String
-					// Await.result(dialogue, 5 seconds)
+					val dialogue = Await.result(redis.lpop("server:grimm_fairy_tales"), Duration(300, MILLISECONDS)).get.utf8String
 
 					sender ! Message("%s: %s".format(self.path.name, dialogue))
 					conversationCounter += 1
@@ -68,7 +65,6 @@ class generalUser(redis: RedisClient) extends Actor {
 			case FriendRequest(_:ActorRef) => 
 				// When someone sends a friends request to add to a list of their contacts
 				// Right now we go from friends request -> start convo with new contact -> Conversation
-				println("FriendRequest")
 				val theFriend: ActorRef = message.asInstanceOf[FriendRequest].targetFriend
 
 				contacts += theFriend
@@ -111,20 +107,32 @@ object localMessaging extends App {
 		createUser(numberOfUsers)
 	}
 
+	def initializeAllUsers(numberOfUsers: Int): Unit = {
+		for (i <- 0 to numberOfUsers-1){
+			allActors(i) ! Initialize(allActors)
+		}
+	}
+
+	def sendFriendRequestsToAll(numberOfUsers: Int): Unit = {
+		for (i <- 0 to numberOfUsers-1){
+			for (j <- 0 to numberOfUsers-1){
+				allActors(i) ! FriendRequest(allActors(j)) 
+			}
+		}
+	}
+
 	implicit val system = ActorSystem("AllPeople")
 	val redis: RedisClient = RedisClient()
+	redis.del("server:ActorMasterList")
 
-	var allActors: ListBuffer[ActorRef] = createUsers(10, redis)	    // Create all users
+	val ActorNumber: Int = 10
+	var allActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
+	initializeAllUsers(ActorNumber)
+	sendFriendRequestsToAll(ActorNumber)
 
-	allActors(0) ! Initialize(allActors)						// Awaken
-	allActors(0) ! FriendRequest(allActors(1))					// Friend Request
-	// These above two lines create deadletters
-	// allActors(0) ! FriendRequest(allActors(2))				// Friend Request
+	// allActors(0) ! FriendRequest(allActors(1))	
 
-	// allActors(1) ! allActors									// Awaken
-	// allActors(1) ! allActors(3)								// Friend Request
-	// allActors(1) ! allActors(4)								// Friend Request
-
+	// system.actorSelection("/user/10") ! FriendRequest(allActors(1))
 
 	// programLoop = {
 	//  Send out all friend requests for this loop
@@ -144,12 +152,14 @@ TODO:
 ✓ Build base behavior of each actor
 ✓ Add Redis functionality
 ✓   Save chats
-    Load up Shakespeare to have realistic looking chats
+✓   Load up Shakespeare to have realistic looking chats
+✓ Make this span multiple machines
+✓  	connect to remote redis server
+  	connect to remote actor 
   Plan out distribution of
   	friend requests
   	who talks to who
   	chat durations
-  Make this span multiple machines
   ⚑⚑⚑⚑⚑⚑ V1 DONE ⚑⚑⚑⚑⚑⚑
 
 */
@@ -160,10 +170,21 @@ Design considerations
    this but the asychronous nature of the Actors makes it hard to keep the messages in the right order.
    Perhaps messages need to have a timestamp and a Queue collects and sorts the messages and puts them 
    in the right order....
+2) Should we have 1 redis server with all the info (text scripts, available actors, chat logs?)
+   OR a server for every machine running?
 */
 
-// To load shakespeare chat, run a script that adds a shit ton of skake to redis is a list
-// then lpop that list to get the chat in order.
-// 
-//
-//
+/*
+Each Actor (name=RemoteActor) for System (HelloRemoteSystem) has 
+the address akka://HelloRemoteSystem@127.0.0.1:5150/user/RemoteActor
+
+On generation of an actor, the actor's address is added to server:ActorMasterList
+Then all the actors are loaded into the local system by reading server:ActorMasterList
+	-We can save an actor's path via self.path or sender.path
+	-And we can get the ActorRef with that path via system.actorSelection("/user/10")
+
+
+Then all messaging/friend requests in the main loop can start
+
+
+*/
