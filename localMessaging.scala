@@ -19,7 +19,7 @@ class generalUser(redis: RedisClient) extends Actor {
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var conversationCounter: Int = 0
-	val conversationLength: Int = 100
+	val conversationLength: Int = 1000
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
@@ -47,8 +47,9 @@ class generalUser(redis: RedisClient) extends Actor {
 			case Message(_:String) => 
 				// When someone sends any message
 				val theMessage: String = message.asInstanceOf[Message].messageContent
+
 				if (conversationCounter < conversationLength) {
-					val dialogue = Await.result(redis.lpop("server:grimm_fairy_tales"), Duration(300, MILLISECONDS)).get.utf8String
+					val dialogue = Await.result(redis.lindex("server:grimm_fairy_tales", conversationCounter), Duration(700, MILLISECONDS)).get.utf8String
 
 					sender ! Message("%s: %s".format(self.path.name, dialogue))
 					conversationCounter += 1
@@ -125,7 +126,7 @@ object localMessaging extends App {
 	val redis: RedisClient = RedisClient()
 	redis.del("server:ActorMasterList")
 
-	val ActorNumber: Int = 10
+	val ActorNumber: Int = 100
 	var allActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
 	initializeAllUsers(ActorNumber)
 	sendFriendRequestsToAll(ActorNumber)
