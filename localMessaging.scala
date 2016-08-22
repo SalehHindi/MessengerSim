@@ -11,15 +11,15 @@ case class Whatever(arg1: String)
 case class Initialize(listOfAllActors: ListBuffer[ActorRef])
 case object FirstMessage
 case class Message(messageContent: String)
-case class FriendRequest(targetFriend: ActorRef)
+case class FriendRequest(targetFriend: ActorSelection)
 case class RemoveFriend(targetFriend: ActorRef)
 
 
 class generalUser(redis: RedisClient) extends Actor {
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
-	var contacts: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
+	var contacts: ListBuffer[ActorSelection] = ListBuffer[ActorSelection]()
 	var conversationCounter: Int = 0
-	val conversationLength: Int = 1000
+	val conversationLength: Int = 800
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
@@ -49,7 +49,7 @@ class generalUser(redis: RedisClient) extends Actor {
 				val theMessage: String = message.asInstanceOf[Message].messageContent
 
 				if (conversationCounter < conversationLength) {
-					val dialogue = Await.result(redis.lindex("server:grimm_fairy_tales", conversationCounter), Duration(700, MILLISECONDS)).get.utf8String
+					val dialogue = Await.result(redis.lindex("server:grimm_fairy_tales", conversationCounter), Duration(4000, MILLISECONDS)).get.utf8String
 
 					sender ! Message("%s: %s".format(self.path.name, dialogue))
 					conversationCounter += 1
@@ -63,10 +63,10 @@ class generalUser(redis: RedisClient) extends Actor {
 					redis.rpush("server:chat_logs:%sV%s".format(sender.path.name, self.path.name), "Conversation Over") 
 				}
 
-			case FriendRequest(_:ActorRef) => 
+			case FriendRequest(_:ActorSelection) => 
 				// When someone sends a friends request to add to a list of their contacts
 				// Right now we go from friends request -> start convo with new contact -> Conversation
-				val theFriend: ActorRef = message.asInstanceOf[FriendRequest].targetFriend
+				val theFriend: ActorSelection = message.asInstanceOf[FriendRequest].targetFriend
 
 				contacts += theFriend
 
@@ -114,10 +114,15 @@ object localMessaging extends App {
 		}
 	}
 
-	def sendFriendRequestsToAll(numberOfUsers: Int): Unit = {
-		for (i <- 0 to numberOfUsers-1){
-			for (j <- 0 to numberOfUsers-1){
-				allActors(i) ! FriendRequest(allActors(j)) 
+	def sendFriendRequestsToAll(numberOfUsers: Int, system: ActorSystem): Unit = {
+		val ActorVector = Await.result(redis.lrange("server:ActorMasterList", 0, -1), Duration(5000, MILLISECONDS))
+
+		// for (i2 <- xxx.toIterable) { println("aaaa"); println(i2.utf8String)}
+
+
+		for (ActorByteString1 <- ActorVector.toIterable){
+			for (ActorByteString2 <- ActorVector.toIterable){
+				system.actorSelection(ActorByteString1.utf8String) ! FriendRequest(system.actorSelection(ActorByteString2.utf8String)) 
 			}
 		}
 	}
@@ -126,14 +131,17 @@ object localMessaging extends App {
 	val redis: RedisClient = RedisClient()
 	redis.del("server:ActorMasterList")
 
-	val ActorNumber: Int = 100
+	val ActorNumber: Int = 7
 	var allActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
 	initializeAllUsers(ActorNumber)
-	sendFriendRequestsToAll(ActorNumber)
+	// Wait for input
+	// Comment out the above del command!!
+	sendFriendRequestsToAll(ActorNumber, system)
 
-	// allActors(0) ! FriendRequest(allActors(1))	
+	// allActors(0) ! FriendRequest(system.actorSelection("/user/6"))	
 
-	// system.actorSelection("/user/10") ! FriendRequest(allActors(1))
+	// // val xxx = system.actorSelection("akka://AllPeople/user/4")
+	// allActors(1) ! FriendRequest(xxx)
 
 	// programLoop = {
 	//  Send out all friend requests for this loop
