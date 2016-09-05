@@ -7,7 +7,6 @@ import redis.RedisClient
 import scala.concurrent._
 import scala.concurrent.duration._
 
-case class Whatever(arg1: String)
 case class Initialize(listOfAllActors: ListBuffer[ActorRef])
 case object FirstMessage
 case class Message(messageContent: String)
