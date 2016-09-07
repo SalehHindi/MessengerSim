@@ -1,13 +1,15 @@
 // Messaging system local test
 
 import akka.actor._
+import akka.remote._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 import redis.RedisClient
 import scala.concurrent._
 import scala.concurrent.duration._
+import java.net._
 
-case class Initialize(listOfAllActors: ListBuffer[ActorRef])
+case class Initialize(localActors: ListBuffer[ActorRef])
 case object FirstMessage
 case class Message(messageContent: String)
 case class FriendRequest(targetFriend: ActorSelection)
@@ -24,9 +26,7 @@ class generalUser(redis: RedisClient) extends Actor {
 		def apply(message: Any): Unit = message match {
 			case Initialize(_:ListBuffer[ActorRef]) =>
 				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
-				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].listOfAllActors
-				val pathAsString : String = self.path.toStringWithAddress(self.path.address)
-				redis.rpush("server:ActorMasterList", pathAsString)
+				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].localActors
 
 			case FirstMessage => 
 				// When someone sends the first message.
@@ -93,14 +93,14 @@ class generalUser(redis: RedisClient) extends Actor {
 object localMessaging extends App {
 	def createUsers(numberOfUsers: Int, redis: RedisClient): ListBuffer[ActorRef] = {
 		@tailrec
-		var allActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
+		var localActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 		
 		def createUser(userCount: Int): ListBuffer[ActorRef] = {
 			if (userCount > 0) {
-				allActors += system.actorOf(Props(new generalUser(redis)), name = "%s".format(userCount))
+				localActors += system.actorOf(Props(new generalUser(redis)), name = "%s".format(userCount))
 				createUser(userCount -1)
 			} else {
-				allActors
+				localActors
 			}
 		}
 
@@ -109,8 +109,50 @@ object localMessaging extends App {
 
 	def initializeAllUsers(numberOfUsers: Int): Unit = {
 		for (i <- 0 to numberOfUsers-1){
-			allActors(i) ! Initialize(allActors)
+			localActors(i) ! Initialize(localActors)
 		}
+	}
+
+	def addUsersToRemoteUsersList(numberOfUsers: Int): Unit = {
+		redis.del("server:ActorMasterList")
+		// redis.del("server:ActorMasterList")
+		for (i <- 0 to numberOfUsers-1){
+			var pathAsString : String = localActors(i).path.toStringWithAddress(localActors(i).path.address)
+			redis.rpush("server:ActorMasterList", pathAsString)
+		}
+
+		// Add list of IPs to the database. 
+		// I will need a more programmatic way to do this...
+		val IPs: ListBuffer[String] = ListBuffer[String]()
+		IPs += "52.40.219.62"
+		// IPs += "52.40.219.62"
+		// IPs += "52.40.219.62"
+		// IPs += "52.40.219.62"
+		// IPs += "52.40.219.62"
+
+		for (IP <- IPs.toIterable) {
+			redis.rpush("server:IPList", IP)
+		}
+	}
+
+	def addRemoteUsers(numberOfUsers: Int): Unit = {
+		// Pop a single IP from the database 
+		val x = Await.result(redis.lpop("server:IPList"), Duration(5000, MILLISECONDS))
+		// println(x(0).utf8String)
+
+		// Make a context from it
+
+
+		// Get all of the actors from that system
+
+		// We add as many remote users as we have created users. 
+		// This presents a problem with distributing loads.
+		for (i <- 0 to numberOfUsers-1) {
+			// we need a context
+			// localActors += context.actorFor("akka.tcp://AllPeople@%s:5150/user/%s".format(RemoteIP, i))
+		}
+
+		// localActors
 	}
 
 	def sendFriendRequestsToAll(numberOfUsers: Int, system: ActorSystem): Unit = {
@@ -122,34 +164,35 @@ object localMessaging extends App {
 		for (ActorByteString1 <- ActorVector.toIterable){
 			for (ActorByteString2 <- ActorVector.toIterable){
 				system.actorSelection(ActorByteString1.utf8String) ! FriendRequest(system.actorSelection(ActorByteString2.utf8String)) 
+				// Send messages to local actors too....
 			}
 		}
 	}
 
 	implicit val system = ActorSystem("AllPeople")
-	val redis: RedisClient = RedisClient()
+	val remoteRedisIP = "52.40.219.62"
+	val redis: RedisClient = new RedisClient(remoteRedisIP, 6379)
 	redis.del("server:ActorMasterList")
 
-	val ActorNumber: Int = 7
-	var allActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
+	val ActorNumber: Int = 3
+	var localActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
+	var remoteActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	initializeAllUsers(ActorNumber)
-	// Wait for input
-	// Comment out the above del command!!
-	sendFriendRequestsToAll(ActorNumber, system)
 
-	// allActors(0) ! FriendRequest(system.actorSelection("/user/6"))	
+	addUsersToRemoteUsersList(ActorNumber)
+	addRemoteUsers(ActorNumber)
+	// sendFriendRequestsToAll(ActorNumber, system)
+	localActors(0) ! FriendRequest(system.actorSelection(localActors(1).path))
+
+
+	// localActors(0) ! FriendRequest(system.actorSelection("/user/6"))	
 
 	// // val xxx = system.actorSelection("akka://AllPeople/user/4")
-	// allActors(1) ! FriendRequest(xxx)
+	// localActors(1) ! FriendRequest(xxx)
 
-	// programLoop = {
-	//  Send out all friend requests for this loop
-	//  Start all conversations for this loop
-	//  Send out all remove requests
-	//  Wait a second or some time
-	// }
+	// We might need to do this for all remote actors. remote is the name of the actor so you can remote ! Etc
+	// val remote = context.actorFor("akka://HelloRemoteSystem@127.0.0.1:5150/user/RemoteActor")}
 }
-
 /*
 
 TODO:

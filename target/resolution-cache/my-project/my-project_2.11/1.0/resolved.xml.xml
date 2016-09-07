@@ -4,7 +4,7 @@
 		module="my-project_2.11"
 		revision="1.0"
 		status="integration"
-		publication="20160905124621"
+		publication="20160906212306"
 	>
 		<description>
 		My Project
@@ -35,6 +35,7 @@
 		<dependency org="org.scala-lang" name="scala-compiler" rev="2.11.8" conf="scala-tool->default,optional(default)"/>
 		<dependency org="org.scala-lang" name="scala-library" rev="2.11.8" conf="scala-tool->default,optional(default);compile->default(compile)"/>
 		<dependency org="com.typesafe.akka" name="akka-actor_2.11" rev="2.4.9-RC2" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-remote_2.11" rev="2.4.9-RC2" conf="compile->default(compile)"/>
 		<dependency org="com.github.etaty" name="rediscala_2.11" rev="1.6.0" conf="compile->default(compile)"/>
 	</dependencies>
 </ivy-module>

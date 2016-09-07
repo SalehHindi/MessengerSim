@@ -24,18 +24,27 @@ I have long been fascinated by the ability of WhatsApp and Facebook Messenger to
 The Actor model is [look up wikipedia]
 
 These main cases represent the possible actions an actor can take:
-Initialize -- Adds the actors to the database of available actorss.
-FriendRequest -- Adds both actorss to each other's contacts so they may message each other.
-FirstMessage -- Displays a greeting to both actorss and start message chain.
-Messenge -- Sends message. [Describe message queue to make sure they are in the same order]
+- Initialize -- Adds the actors to the database of available actorss.
+- FriendRequest -- Adds both actorss to each other's contacts so they may message each other.
+- FirstMessage -- Displays a greeting to both actorss and start message chain.
+- Messenge -- Sends message. [Describe message queue to make sure they are in the same order]
 
-### Distribution of Conversations
+### Distributions
+#### Conversation
 In real life, people don't talk to everyone. They talk to a distribution of friends with a person chatting a lot with a few of their closest friends and chatting for not very long and infrequently with a lot of people. To simulate this, conversations are started according to this function: [conversation distribution] [picture of distribution]
+
+#### Actor
+One problem is how to distribute the actors in MessengerSim. When I ran the simulation all the machines had the same processing power [List processing power]
 
 ### Bottlenecks
 I initially thought the biggest constraint on the number of users is memory but it seems to be processing on the cpu. [do some fermi calculations for memory vs cpu]
+[Attach htop picture]
 
-### Security
+[At what point does the connection to the server timeout?]
+
+### Complexity Analysis
+
+### Security [or other considerations]
 Speculate on security. If I were to add security to the conversations, this is what it would look like.
 It would be demanding on cpu.
 
