@@ -20,7 +20,8 @@ class generalUser(redis: RedisClient) extends Actor {
 	var activeConversations: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	var contacts: ListBuffer[ActorSelection] = ListBuffer[ActorSelection]()
 	var conversationCounter: Int = 0
-	val conversationLength: Int = 800
+	val conversationLength: Int = 30
+	val remote = context.actorSelection("akka.tcp://AllPeople@%s:5150/user/1".format("52.89.11.41"))
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
@@ -29,6 +30,7 @@ class generalUser(redis: RedisClient) extends Actor {
 				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].localActors
 
 			case FirstMessage => 
+				println("Got a first message!")
 				// When someone sends the first message.
 
 				// Clear the chat at the beginning of each 
@@ -70,6 +72,9 @@ class generalUser(redis: RedisClient) extends Actor {
 				contacts += theFriend
 
 				contacts(contacts.length - 1) ! FirstMessage
+
+				remote ! FirstMessage
+
 
 			case RemoveFriend(_:ActorRef) => 
 				// When someone removes someone else from a list of their contacts
@@ -116,19 +121,21 @@ object localMessaging extends App {
 	def addUsersToRemoteUsersList(numberOfUsers: Int): Unit = {
 		redis.del("server:ActorMasterList")
 		// redis.del("server:ActorMasterList")
+
+		// Push all local the actors to redis
 		for (i <- 0 to numberOfUsers-1){
 			var pathAsString : String = localActors(i).path.toStringWithAddress(localActors(i).path.address)
 			redis.rpush("server:ActorMasterList", pathAsString)
 		}
 
-		// Add list of IPs to the database. 
+		// Add list of remote IPs to the database. 
 		// I will need a more programmatic way to do this...
 		val IPs: ListBuffer[String] = ListBuffer[String]()
-		IPs += "52.40.219.62"
-		// IPs += "52.40.219.62"
-		// IPs += "52.40.219.62"
-		// IPs += "52.40.219.62"
-		// IPs += "52.40.219.62"
+		IPs += "52.89.11.41"
+		// IPs += "52.89.11.41"
+		// IPs += "52.89.11.41"
+		// IPs += "52.89.11.41"
+		// IPs += "52.89.11.41"
 
 		for (IP <- IPs.toIterable) {
 			redis.rpush("server:IPList", IP)
@@ -170,7 +177,7 @@ object localMessaging extends App {
 	}
 
 	implicit val system = ActorSystem("AllPeople")
-	val remoteRedisIP = "52.40.219.62"
+	val remoteRedisIP = "52.89.11.41"
 	val redis: RedisClient = new RedisClient(remoteRedisIP, 6379)
 	redis.del("server:ActorMasterList")
 
@@ -179,8 +186,10 @@ object localMessaging extends App {
 	var remoteActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	initializeAllUsers(ActorNumber)
 
-	addUsersToRemoteUsersList(ActorNumber)
-	addRemoteUsers(ActorNumber)
+	// Testing connecting to remote Actor
+
+	// addUsersToRemoteUsersList(ActorNumber)
+	// addRemoteUsers(ActorNumber)
 	// sendFriendRequestsToAll(ActorNumber, system)
 	localActors(0) ! FriendRequest(system.actorSelection(localActors(1).path))
 
