@@ -21,16 +21,18 @@ class generalUser(redis: RedisClient) extends Actor {
 	var contacts: ListBuffer[ActorSelection] = ListBuffer[ActorSelection]()
 	var conversationCounter: Int = 0
 	val conversationLength: Int = 30
-	val remote = context.actorSelection("akka.tcp://AllPeople@%s:5150/user/1".format("52.89.11.41"))
+	// val remote = context.actorSelection("akka.tcp://AllPeople@%s:5150/user/1".format("52.89.11.41"))
 
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
 			case Initialize(_:ListBuffer[ActorRef]) =>
 				// After initializing all the actors, we need to pass in all the Actors in the system to each actor
 				val theActorList: ListBuffer[ActorRef] = message.asInstanceOf[Initialize].localActors
+				val pathAsString : String = self.path.toStringWithAddress(self.path.address)
+				redis.rpush("server:ActorMasterList", pathAsString)
+
 
 			case FirstMessage => 
-				println("Got a first message!")
 				// When someone sends the first message.
 
 				// Clear the chat at the beginning of each 
@@ -68,12 +70,12 @@ class generalUser(redis: RedisClient) extends Actor {
 				// When someone sends a friends request to add to a list of their contacts
 				// Right now we go from friends request -> start convo with new contact -> Conversation
 				val theFriend: ActorSelection = message.asInstanceOf[FriendRequest].targetFriend
-
+				
 				contacts += theFriend
 
 				contacts(contacts.length - 1) ! FirstMessage
 
-				remote ! FirstMessage
+				// remote ! FirstMessage
 
 
 			case RemoveFriend(_:ActorRef) => 
@@ -177,7 +179,7 @@ object localMessaging extends App {
 	}
 
 	implicit val system = ActorSystem("AllPeople")
-	val remoteRedisIP = "52.89.11.41"
+	val remoteRedisIP = "127.0.0.1"
 	val redis: RedisClient = new RedisClient(remoteRedisIP, 6379)
 	redis.del("server:ActorMasterList")
 
@@ -190,8 +192,8 @@ object localMessaging extends App {
 
 	// addUsersToRemoteUsersList(ActorNumber)
 	// addRemoteUsers(ActorNumber)
-	// sendFriendRequestsToAll(ActorNumber, system)
-	localActors(0) ! FriendRequest(system.actorSelection(localActors(1).path))
+	sendFriendRequestsToAll(ActorNumber, system)
+	// localActors(0) ! FriendRequest(system.actorSelection(localActors(1).path))
 
 
 	// localActors(0) ! FriendRequest(system.actorSelection("/user/6"))	
