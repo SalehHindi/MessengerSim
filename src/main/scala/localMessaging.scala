@@ -23,6 +23,9 @@ class generalUser(redis: RedisClient) extends Actor {
 	val conversationLength: Int = 30
 	// val remote = context.actorSelection("akka.tcp://AllPeople@%s:5150/user/1".format("52.89.11.41"))
 
+	// Use this to measure run time
+	// val simulationComplete: Int = 10
+
 	def receive = new scala.PartialFunction[Any, Unit ] {
 		def apply(message: Any): Unit = message match {
 			case Initialize(_:ListBuffer[ActorRef]) =>
@@ -183,7 +186,7 @@ object localMessaging extends App {
 	val redis: RedisClient = new RedisClient(remoteRedisIP, 6379)
 	redis.del("server:ActorMasterList")
 
-	val ActorNumber: Int = 3
+	val ActorNumber: Int = 20
 	var localActors: ListBuffer[ActorRef] = createUsers(ActorNumber, redis)	    // Create all users
 	var remoteActors: ListBuffer[ActorRef] = ListBuffer[ActorRef]()
 	initializeAllUsers(ActorNumber)

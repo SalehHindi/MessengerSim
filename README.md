@@ -1,7 +1,7 @@
 # MessengerSim - V1
 
 ## Challenge
-I have long been fascinated by the ability of WhatsApp and Facebook Messenger to scale to billions of users. I wanted to see first hand how hard it would be to build scalable asynchronous system so I built MessengerSim. MessengerSim uses the Akka library and it's Actor model for asynchronous communication to build a simulation of a messenging platform. The challenge is to build a simulation of distributed conversations that scale.
+I have long been fascinated by the ability of WhatsApp and Facebook Messenger to scale to billions of users. I wanted to see first hand how hard it would be to build scalable asynchronous system so I built MessengerSim. MessengerSim uses the Akka library and it's Actor model for asynchronous communication to build a simulation of a messenging platform. The challenge is to build a simulation of distributed conversations that scales to 1MM concurrent conversations. 
 
 ## Running
 
@@ -32,18 +32,46 @@ These main cases represent the possible actions an actor can take in MessengerSi
 - FirstMessage -- Displays a greeting to both actorss and start message chain.
 - Messenge -- Sends message. 
 
-[Generally how the program works]
+The program works by creating n actors. Then each actor sends a friend request to every other actor so that each actor can have all other actors in its list of contacts. Then all the actors send a message to all the actors in its contacts and a conversation is started between each actor and all other actors. This forms a complete graph of actors. In normal conversations, most people talk to a small subset of their contacts and these conversations have lengths that vary by some distribution instead of talking to everyone for a fixed length.
 
 ### Analysis of Experiment
-Some considerations are 
-1. How the actors are stored (Vector vs List)
-2. How is the servers are distributed
-3. Bottlenecks (CPU vs Memory)
+
+Currently, the program is made to run on one machine for simplicity but it can easily be configured to run on multiple machines. This is admittedly a pain in the butt to do as the IPs of each machine need to be hardcoded in the application.conf file. With one machine, a single machine runs the redis server, designated the "local" machine and the others distribute the computational workload. 
+
+I thought that memory would be the biggest bottleneck to the performance of this program but it turned out that the program is more computationally intensive than memory intensive. To examine performance, I ran the simulation on one machine and used `htop` to look at peak CPU usage, Memory usage, and total runtime. I ran the simulation for 10, 15, and 20 agents on my personal laptop and I ran the simulation on an AWS C3.4xlarge instance for 50, 100, 150, 1000 agents. Each simulation with n agents will have n^2 asynchronous conversations.
+
+The data is presented below. These screenshots were taken at approximately peak CPU usage.
+Local Machine: 10 agents 100 conversations
+
+
+Local Machine: 15 agents 225 conversations
+
+
+Local Machine: 20 agents 400 conversations
+
+
+EC2 Instance: 100 agents 10,000 conversations
+
+
+EC2 Instance: 150 agents 22,500 conversations
+
+
+EC2 Instance: 200 agents 40,000 conversations
+
+
+EC2 Instance: 1000 agents 1,000,000 conversations
+
+
+As the data shows, increasing agents generally increased max CPU usage except at the EC2 1000 agent trial. Memory never hits a maximum leading me to think that the bottleneck is CPU usage. [Point about connections being dropped]. [Point about runtime] 
+
 4. At what point should the wait for the server response timeout?
+
 5. Message queue
 
+6. Max CPU usage vs CPU time
+
 ### Clustering
-One problem is how to distribute the actors in MessengerSim. When I ran the simulation all the machines had the same processing power [List processing power]
+One problem is how to distribute the actors in MessengerSim. When I ran the simulation all the machines had the same processing power 
 
 [How does clustering work in Akka?]
 
