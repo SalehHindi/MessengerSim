@@ -64,24 +64,9 @@ EC2 Instance: 200 agents 40,000 conversations
 EC2 Instance: 1000 agents 1,000,000 conversations
 ![EC2 Instance: 1000 agents 1,000,000 conversations](http://i.imgur.com/4MA562S.png "EC2 Instance: 1000 agents 1,000,000 conversations")
 
-As the data shows, increasing agents generally increased max CPU usage except at the EC2 1000 agent trial. Memory never hits a maximum leading me to think that the bottleneck is CPU usage. [Point about connections being dropped]. [Point about runtime] 
-
-4. At what point should the wait for the server response timeout?
-
-5. Message queue
-
-6. Max CPU usage vs CPU time
-
-### Clustering
-One problem is how to distribute the actors in MessengerSim. When I ran the simulation all the machines had the same processing power 
-
-[How does clustering work in Akka?]
-
-## Security
-Speculate on security. If I were to add security to the conversations, this is what it would look like.
-It would be demanding on cpu.
+As the data shows, increasing agents generally increased max CPU usage except at the EC2 1000 agent trial. Memory never hits a maximum leading me to think that the bottleneck is CPU usage. Even the peak CPU usage does not hit a maximum but I noticed that after 100 agents, on the EC2 Machine and 20 agents on my local laptop, connections to the database by the threads timed out. I also noticed runtime slowed proportionally to the number of connections timed out. This might mean that as the number of agents increases, the response time of the database approaches its timeout limit and thus the program is taking longer to run. 
 
 ## Future Plans
-V2 - Dockerize the app
-   - Message queue
-   - Scale to XXXX number of users
+V2 - Dockerize the app. Currently available as an AWS AMI (reach out if you want access!)
+   - Adding security features to see the impact encrypting conversations has on the workload.
+   - Scale to 10,000,000 users with the clustering features in akka.
