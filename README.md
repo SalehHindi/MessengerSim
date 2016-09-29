@@ -42,24 +42,30 @@ I thought that memory would be the biggest bottleneck to the performance of this
 
 The data is presented below. These screenshots were taken at approximately peak CPU usage.
 Local Machine: 10 agents 100 conversations
-
+![Local Machine: 10 agents 100 conversations](http://i.imgur.com/dbwjlZs.png "Local Machine: 10 agents 100 conversations")
 
 Local Machine: 15 agents 225 conversations
+![Local Machine: 15 agents 225 conversations](http://i.imgur.com/9HqqkmN.png "Local Machine: 15 agents 225 conversations")
 
 
 Local Machine: 20 agents 400 conversations
+![Local Machine: 20 agents 400 conversations](http://i.imgur.com/rq8sWG1.png "Local Machine: 20 agents 400 conversations")
 
 
 EC2 Instance: 100 agents 10,000 conversations
+![EC2 Instance: 100 agents 10,000 conversations](http://i.imgur.com/Fs0bxBX.png "EC2 Instance: 100 agents 10,000 conversations")
 
 
 EC2 Instance: 150 agents 22,500 conversations
+![EC2 Instance: 150 agents 22,500 conversations](http://i.imgur.com/W3RI53m.png "EC2 Instance: 150 agents 22,500 conversations")
 
 
 EC2 Instance: 200 agents 40,000 conversations
+![EC2 Instance: 200 agents 40,000 conversations](http://i.imgur.com/gVq76s2.png "EC2 Instance: 200 agents 40,000 conversations")
 
 
 EC2 Instance: 1000 agents 1,000,000 conversations
+![EC2 Instance: 1000 agents 1,000,000 conversations](http://i.imgur.com/4MA562S.png "EC2 Instance: 1000 agents 1,000,000 conversations")
 
 
 As the data shows, increasing agents generally increased max CPU usage except at the EC2 1000 agent trial. Memory never hits a maximum leading me to think that the bottleneck is CPU usage. [Point about connections being dropped]. [Point about runtime] 
