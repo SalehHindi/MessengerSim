@@ -34,7 +34,7 @@ These main cases represent the possible actions an actor can take in MessengerSi
 
 The program works by creating n actors. Then each actor sends a friend request to every other actor so that each actor can have all other actors in its list of contacts. Then all the actors send a message to all the actors in its contacts and a conversation is started between each actor and all other actors. This forms a complete graph of actors. In normal conversations, most people talk to a small subset of their contacts and these conversations have lengths that vary by some distribution instead of talking to everyone for a fixed length.
 
-### Analysis of Experiment
+## Analysis of Experiment
 
 Currently, the program is made to run on one machine for simplicity but it can easily be configured to run on multiple machines. This is admittedly a pain in the butt to do as the IPs of each machine need to be hardcoded in the application.conf file. With one machine, a single machine runs the redis server, designated the "local" machine and the others distribute the computational workload. 
 
