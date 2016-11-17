@@ -1,7 +1,7 @@
 # MessengerSim - V1
 
 ## Challenge
-I have long been fascinated by the ability of WhatsApp and Facebook Messenger to scale to billions of users. I wanted to see first hand how hard it would be to build scalable asynchronous system so I built MessengerSim. MessengerSim uses the Akka library and it's Actor model for asynchronous communication to build a simulation of a messenging platform. The challenge is to build a simulation of distributed conversations that scales to 1MM concurrent conversations. 
+I have long been fascinated by the ability of WhatsApp and Facebook Messenger to scale to billions of users. I wanted to see first hand how hard it would be to build scalable asynchronous system so I built MessengerSim. MessengerSim uses the Akka library and it's Actor model for asynchronous communication to build a simulation of a messenging platform. The challenge is to build a simulation of distributed conversations that scales. 
 
 ## Running
 
